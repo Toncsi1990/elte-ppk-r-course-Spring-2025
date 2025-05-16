@@ -71,55 +71,125 @@ In your discussion of the findings, briefly interpret the results of the above a
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
 ```{r}
+install.packages("haven")
+library(haven)
+sav_file <- file.choose()
+titanic_data <- read_sav(sav_file)
+View(titanic_data)
 
 ```
 
 ## EDA
 
 ```{r}
+summary(titanic_data)
+str(titanic_data)
+head(titanic_data)
+names(titanic_data)
+colSums(is.na(titanic_data))
 
 ```
 
 ## Clean the data
 
 ```{r}
+titanic_data_clean <- titanic_data[!is.na(titanic_data$Age), ]
+titanic_data_clean <- titanic_data_clean[, !(names(titanic_data_clean) %in% c("Ticket", "Cabin", "Name"))]
+titanic_data_clean$Sex <- factor(titanic_data_clean$Sex)
+
 
 ```
 
 ## Creating a datatable for Sue, Kate, and Leonardo
 
 ```{r}
+titanic_family <- data.frame(
+  PassengerId = c(NA, NA, NA),
+  Survived = c(NA, NA, NA),
+  Pclass = c(3, 3, 3),
+  Sex = factor(c("female", "female", "male"), levels = levels(titanic_data_clean$Sex)),
+  Age = c(20, 4, 30),
+  SibSp = c(0, 0, 0),
+  Parch = c(0, 0, 0),
+  Fare = c(8, 8, 8),
+  Embarked = factor(c("S", "S", "S"), levels = levels(titanic_data_clean$Embarked))
+)
 
+titanic_family
 ```
 
 ## Building the null model
 
 ```{r}
+null_model <- glm(Survived ~ 1, data = titanic_data_clean, family = binomial)
+summary(null_model)
 
 ```
 
 ## Building the model
 
 ```{r}
+logistic_model <- glm(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked,
+                      data = titanic_data_clean,
+                      family = binomial)
+summary(logistic_model)
 
 ```
 
 # Check the assumptions
 
 ```{r}
+library(car)
+library(ResourceSelection)
+install.packages("ResourceSelection")
+library(ResourceSelection)
+
+hoslem.test(titanic_data$Survived, fitted(model, type = "response"))
+length(titanic_data$Survived)
+length(fitted(model, type = "response"))
+
+library(ResourceSelection)
+
+model <- glm(Survived ~ Pclass + Sex + Age + Fare + Embarked,
+             data = titanic_data, family = binomial)
+
+used_rows <- as.numeric(rownames(model$model))
+y <- titanic_data$Survived[used_rows]
+pred <- fitted(model, type = "response")
+
+hoslem.test(y, pred)
 
 ```
 
 # Compare the models
 
 ```{r}
+model1 <- glm(Survived ~ Age + Sex, data = titanic_data, family = binomial)
+model2 <- glm(Survived ~ Age + Sex + Pclass, data = titanic_data, family = binomial)
+
+aic1 <- AIC(model1)
+aic2 <- AIC(model2)
+
+if (aic1 < aic2) {
+  print("Model1 választása javasolt, kisebb az AIC értéke.")
+} else {
+  print("Model2 választása javasolt, kisebb az AIC értéke.")
+}
 
 ```
 
 # Calculate odds ratio and confidence interval
 
 ```{r}
+exp_coef <- exp(coef(model2))
+exp_confint <- exp(confint(model2))
+result <- data.frame(
+  OR = exp_coef,
+  CI_lower = exp_confint[,1],
+  CI_upper = exp_confint[,2]
+)
 
+print(result)
 ```
 
 # Report the results
@@ -128,3 +198,14 @@ Read the dataset used in this assignment. Pay attention to the extension of the 
 
 ```
 
+Based on the logistic regression model results, survival probability is significantly influenced by age, sex, and passenger class.
+
+Increasing age decreases the odds of survival (OR = 0.96, 95% CI: 0.95–0.98), meaning older passengers were less likely to survive the disaster.
+
+Males have significantly lower odds of survival compared to females (OR = 0.08, 95% CI: 0.05–0.12), indicating a strong gender difference.
+
+Passenger class is also an important factor: those traveling in higher classes had greater odds of survival, while the odds significantly decrease with lower classes (OR = 0.28, 95% CI: 0.21–0.36).
+
+According to the AIC, the model including age, sex, and passenger class fits the data better than the simpler model that only includes age and sex.
+
+Overall, the model effectively captures the key factors affecting survival odds on the Titanic.
