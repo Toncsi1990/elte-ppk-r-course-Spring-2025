@@ -103,12 +103,20 @@ Talk about the limitations of your study and findings.
 Read the Animal Rights Scale (ARQ) dataset from the 'data/' folder. Pay attention to the extension.
 
 ```{r}
+list.files("data/")
+
+ars_data <- read.csv("data/assignment_5_dataset.csv")
+
 
 ```
 
 ## EDA
 
 ```{r}
+ars_data <- read.csv("data/assignment_5_dataset.csv")
+str(ars_data)
+summary(ars_data)
+head(ars_data)
 
 ```
 
@@ -119,6 +127,12 @@ Recode the sex and party variables as factor type variables with the following l
   * party: 1 - democrat, 2 - republican, 3 - other, 4 - none
 
 ```{r}
+class(df)
+ls()
+ars_data$sex <- factor(ars_data$sex, levels = c(1, 2), labels = c("male", "female"))
+ars_data$party <- factor(ars_data$party, levels = c(1, 2, 3, 4), labels = c("democrat", "republican", "other", "none"))
+View(ars_data)
+
 
 ```
 
@@ -127,12 +141,20 @@ Recode the sex and party variables as factor type variables with the following l
 __Note:__ Remember to only include the variables of the questionnaire that will be part of the factor analysis.
 
 ```{r}
+library(corrplot)
+ars_items <- ars_data[, paste0("ar", 1:28)]
+cor_matrix <- cor(ars_items, use = "pairwise.complete.obs")
+library(corrplot)
+corrplot(cor_matrix, method = "color", tl.cex = 0.6)
 
 ```
 
 Create the correlation matrix.
 
 ```{r}
+
+cor_matrix <- cor(ars_data[, paste0("ar", 1:28)], use = "pairwise.complete.obs")
+print(cor_matrix)
 
 ```
 
@@ -141,6 +163,15 @@ Create the correlation matrix.
 Create a visualization of the results of the correlation matrix.
 
 ```{r}
+install.packages("corrplot")
+library(corrplot)
+
+corrplot(cor_matrix, method = "color", tl.cex = 0.6)
+ars_items <- ars_data[, paste0("ar", 1:28)]
+cor_matrix <- cor(ars_items, use = "pairwise.complete.obs")
+library(corrplot)
+corrplot(cor_matrix, method = "color", tl.cex = 0.6)
+
 
 ```
 
@@ -149,18 +180,44 @@ Create a visualization of the results of the correlation matrix.
 Calculate the KMO score.
 
 ```{r}
+library(psych)
+ars_items <- ars_data[, paste0("ar", 1:28)]
+kmo_result <- KMO(cor(ars_items, use = "pairwise.complete.obs"))
+install.packages("psych")
+library(psych)
+ars_items <- ars_data[, paste0("ar", 1:28)]
+kmo_result <- KMO(cor(ars_items, use = "pairwise.complete.obs"))
+print(kmo_result)
+
 
 ```
 
 ## Test for multivariate normality
 
 ```{r}
+install.packages("MVN")
+
+library(MVN)
+ars_items <- ars_data[, paste0("ar", 1:28)]
+mvn_result <- mvn(data = ars_items, mvnTest = "mardia")
+print(mvn_result$multivariateNormality)
+
 
 ```
 
 Test for skewness and kurtosis.
 
 ```{r}
+library(moments)
+ars_items <- ars_data[, paste0("ar", 1:28)]
+skewness_values <- apply(ars_items, 2, skewness, na.rm = TRUE)
+kurtosis_values <- apply(ars_items, 2, kurtosis, na.rm = TRUE)
+
+data.frame(
+  Item = names(ars_items),
+  Skewness = skewness_values,
+  Kurtosis = kurtosis_values
+)
 
 ```
 
@@ -169,6 +226,11 @@ Test for skewness and kurtosis.
 Create a scree plot to help the decision on how many factors to include.
 
 ```{r}
+library(ggplot2)
+library(psych)
+
+fa_parallel <- fa.parallel(ars_items, fm = "ml", fa = "fa")
+
 
 ```
 
@@ -177,30 +239,40 @@ Create a scree plot to help the decision on how many factors to include.
 Run the factor analysis with the chosen number of factors.
 
 ```{r}
+library(psych)
+fa_result <- fa(ars_items, nfactors = 3, rotate = "varimax", fm = "ml")
+print(fa_result)
 
 ```
 
 Sort the communality scores in decreasing order.
 
 ```{r}
-
+sorted_communality <- sort(fa_result$communality, decreasing = TRUE)
+sorted_communality
 ```
 
 Calculate the mean communality scores.
 
 ```{r}
+mean_communality <- mean(fa_result$communality)
+mean_communality
+
 
 ```
 
 Show the factor loadings for the chosen factor structure.
 
 ```{r}
-
+print(fa_result$loadings)
 ```
 
 Visualize the factor structure.
 
 ```{r}
+library(psych)
+fa.diagram(fa_result, main = "Factor Structure Diagram")
+
 
 ```
 
@@ -209,18 +281,27 @@ Visualize the factor structure.
 Calculate the factor scores.
 
 ```{r}
+fa_scores <- factor.scores(ars_items, fa_result)$scores
 
 ```
 
 Bind factor scores to the original dataset.
 
 ```{r}
+ars_data_with_scores <- cbind(ars_data, fa_scores)
 
 ```
 
 Run the logistic regression.
 
 ```{r}
+table(ars_data$party)
+ars_data_scores$party_binary <- ifelse(ars_data_scores$party == "democrat", 1, 0)
+logistic_model <- glm(party_binary ~ ML1 + ML2 + ML3, 
+                      data = ars_data_scores, 
+                      family = binomial)
 
+
+summary(logistic_model)
 ```
 
