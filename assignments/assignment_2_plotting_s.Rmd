@@ -88,6 +88,35 @@ Notes:
 -   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
 ```{r}
+install.packages("readr")
+library(readr)
+url <- "https://raw.githubusercontent.com/rfordatascience/tidytuesday/refs/heads/main/data/2019/2019-02-19/phd_by_field.csv"
+phd_data <- read_csv(url)
+View(phd_data)
+
+library(dplyr)
+phd_counts <- phd_data %>%
+  group_by(broad_field) %>%
+  summarise(total_phds = n()) %>%
+  arrange(desc(total_phds))
+phd_counts
+
+library(ggplot2)
+library(scales)
+ggplot(phd_counts, aes(x = broad_field, y = total_phds)) +
+  geom_col(fill = "steelblue") +
+  scale_y_continuous(labels = comma_format()) +
+  scale_x_discrete(breaks = scales::pretty_breaks()) +  # ezt diszkrét változónál nem használjuk, inkább continuous-hoz
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+library(RColorBrewer)
+ggplot(phd_counts, aes(x = broad_field, y = total_phds, fill = broad_field)) +
+  geom_col(color = "black", size = 1.2) +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_y_continuous(labels = comma_format()) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
 ```
 
