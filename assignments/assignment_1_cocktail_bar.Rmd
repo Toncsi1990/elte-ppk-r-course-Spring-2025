@@ -34,14 +34,19 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 ```{r}
 url <- "https://raw.githubusercontent.com/nthun/cocktail-balance/refs/heads/master/cocktail_data.tsv"
 cocktail_data <- read_tsv(url)
-```
+View(cocktail_data)
 
+```
 
 ## 2. Transform the data table and clean the ingredient variable!
 
 The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.
 
 ```{r}
+View(adat)
+
+
+
 
 ```
 
@@ -112,7 +117,6 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 ```{r}
 
 ```
-
 
 Congrats, the bar is now officially open!
 
