@@ -106,7 +106,7 @@ library(scales)
 ggplot(phd_counts, aes(x = broad_field, y = total_phds)) +
   geom_col(fill = "steelblue") +
   scale_y_continuous(labels = comma_format()) +
-  scale_x_discrete(breaks = scales::pretty_breaks()) +  # ezt diszkrét változónál nem használjuk, inkább continuous-hoz
+  scale_x_discrete(breaks = scales::pretty_breaks()) +  
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -131,5 +131,39 @@ Notes:
 -   The point size is 2, . The theme is set to light.
 
 ```{r}
+library(readr)
+
+commute_mode <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2019/2019-11-05/commute.csv")
+
+View(commute_mode)
+
+library(dplyr)
+
+commute_by_state <- commute_mode %>%
+  group_by(state) %>%
+  summarise(total_commutes = sum(n, na.rm = TRUE))
+
+View(commute_by_state)
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+
+commute_wide <- commute_mode %>%
+  filter(mode %in% c("Bike", "Walk")) %>%
+  group_by(state, mode) %>%
+  summarise(total = sum(n, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = mode, values_from = total)
+
+ggplot(commute_wide, aes(x = Bike, y = Walk)) +
+  geom_point(color = "steelblue", size = 2) +
+  geom_text(aes(label = substr(state, 1, 2)), color = "white", size = 3) +
+  scale_x_log10(labels = comma_format()) +
+  scale_y_log10(labels = comma_format()) +
+  labs(x = "Bike commuters", y = "Walk commuters", title = "Commuting by Bike vs. Walk (per state)") +
+  theme_light()
+
+
 
 ```
