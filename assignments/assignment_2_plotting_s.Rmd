@@ -32,6 +32,49 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 
 ```{r}
 
+install.packages("forcats")
+library(forcats)
+library(dplyr)
+
+expeditions_filtered <- expeditions %>%
+  mutate(top_15 = fct_lump(peak_name, n = 15, other_level = "Other")) %>%
+  filter(top_15 != "Other")
+
+View(expeditions_filtered)
+library(dplyr)
+
+expeditions %>%
+  count(peak_name, sort = TRUE) %>%
+  slice_head(n = 15)
+
+library(dplyr)
+library(forcats)
+library(ggplot2)
+
+top_peaks <- expeditions %>%
+  count(peak_name, sort = TRUE) %>%
+  slice_head(n = 15) %>%
+  mutate(peak_name = fct_reorder(peak_name, n))
+
+ggplot(top_peaks, aes(x = peak_name, y = n)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "Peak", y = "Number of expeditions", title = "Top 15 Most Frequent Peaks")
+
+library(viridis)
+top_peaks <- expeditions %>%
+  count(peak_name, sort = TRUE) %>%
+  slice_head(n = 15) %>%
+  mutate(peak_name = fct_reorder(peak_name, n))
+
+ggplot(top_peaks, aes(x = peak_name, y = n, fill = n)) +
+  geom_col() +
+  scale_fill_viridis_c() +
+  coord_flip() +
+  theme_light() +
+  labs(x = "Peak", y = "Number of expeditions", title = "Top 15 Most Frequent Peaks")
+
+
 ```
 
 ## Task 2: PhDs awarded
