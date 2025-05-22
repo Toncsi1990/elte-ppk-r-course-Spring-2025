@@ -43,10 +43,38 @@ View(cocktail_data)
 The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.
 
 ```{r}
-View(adat)
+cocktail_data <- cocktail_data %>%
+  mutate(ingredients = str_replace_all(ingredients, "<br\\s*/?>", ","))
+cocktail_data <- cocktail_data %>%
+  mutate(ingredients = ingredients %>%
+           str_replace_all("<br\\s*/?>", ",") %>%
+           str_replace_all("<b4\\s*/?>", ","))
 
+library(tidyverse)
 
+cocktail_data_long <- cocktail_data %>%
+  separate_rows(ingredients, sep = ",") %>%
+  mutate(clean_ingredients = str_trim(ingredients))
 
+View(cocktail_data_long)
+
+library(tidyverse)
+
+cocktail_data_long <- cocktail_data %>%
+  separate_rows(ingredients, sep = ",") %>%
+  mutate(clean_ingredients = str_trim(ingredients)) %>%
+  mutate(clean_ingredients = clean_ingredients %>%
+           str_remove_all("[()]") %>%
+           str_remove_all("\\boz\\b") %>%
+           str_remove_all("\\b\\d+\\s*/\\s*\\d+\\b") %>%
+           str_remove_all("\\b\\d+(\\.\\d+)?\\s*(ml|cl|dash(?:es)?|tsp|tbsp|teaspoons?|cups?|parts?)\\b") %>%
+           str_remove_all("\\b\\d+(\\.\\d+)?%\\s*abv\\b") %>%
+           str_remove_all("\\b\\d+(\\.\\d+)?%\\b") %>%
+           str_remove_all("\\b\\d+(\\.\\d+)?\\b") %>%
+           str_squish() %>%
+           str_to_lower()
+         )
+View(cocktail_data_long)
 
 ```
 
@@ -55,6 +83,10 @@ View(adat)
 Before opening the bar, you need to find a reliable supplier that has all the ingredients. You need to send a list of all possible ingredients you will need. They don't need the quantities (i.e. how many of these are needed), just the names of the ingredients.
 
 ```{r}
+cocktail_data_long_sorted <- cocktail_data_long %>%
+  arrange(clean_ingredients)
+
+View(cocktail_data_long_sorted)
 
 ```
 
@@ -63,7 +95,14 @@ Before opening the bar, you need to find a reliable supplier that has all the in
 How many different ingredients you will need?
 
 ```{r}
+library(tidyverse)
 
+unique_ingredients_count <- cocktail_data_long %>%
+  filter(!is.na(clean_ingredients) & clean_ingredients != "") %>%
+  distinct(clean_ingredients) %>%
+  nrow()
+
+unique_ingredients_count
 ```
 
 ## 5. What are the top 10 ingredients?
@@ -71,6 +110,15 @@ How many different ingredients you will need?
 What are the 10 most frequently used ingredients? If there are ties, you can list more than 10.
 
 ```{r}
+library(tidyverse)
+
+top_ingredients <- cocktail_data_long %>%
+  filter(!is.na(clean_ingredients) & clean_ingredients != "") %>%
+  count(clean_ingredients, sort = TRUE) %>%
+  arrange(desc(n)) %>%
+  mutate(rank = dense_rank(desc(n))) %>%
+  filter(rank <= 10)
+top_ingredients
 
 ```
 
@@ -79,6 +127,24 @@ What are the 10 most frequently used ingredients? If there are ties, you can lis
 Count the number of ingredients and filter all the cocktails that has that many.
 
 ```{r}
+library(tidyverse)
+
+url <- "https://raw.githubusercontent.com/nthun/cocktail-balance/refs/heads/master/cocktail_data.tsv"
+cocktail_data <- read_tsv(url)
+
+cocktail_ingredient_counts <- cocktail_data %>%
+  mutate(ingredient_count = str_count(ingredients, ",") + 1)
+
+head(cocktail_ingredient_counts)
+
+max_count <- max(cocktail_ingredient_counts$ingredient_count, na.rm = TRUE)
+
+cocktails_with_most_ingredients <- cocktail_ingredient_counts %>%
+  filter(ingredient_count == max_count) %>%
+  select(name, ingredient_count)
+
+print(cocktails_with_most_ingredients)
+
 
 ```
 
@@ -87,19 +153,70 @@ Count the number of ingredients and filter all the cocktails that has that many.
 Count all cocktails with only one ingredient, and
 
 ```{r}
+ingredients_long <- cocktail_data %>%
+  separate_rows(ingredients, sep = ",") %>%
+  mutate(ingredients = str_trim(ingredients))
+
+ingredient_counts <- ingredients_long %>%
+  distinct(name, ingredients) %>%
+  count(ingredients, name = "cocktail_count")
+
+rare_ingredients <- ingredient_counts %>%
+  filter(cocktail_count == 1)
+
+nrow(rare_ingredients)
+
 
 ```
 
 ## 8. Which cocktail has an ingredient that is only used in one cocktail?
 
 ```{r}
+library(tidyverse)
+
+ingredients_clean_long <- cocktail_data_long %>%
+  separate_rows(clean_ingredients, sep = ",") %>%
+  mutate(clean_ingredients = str_trim(clean_ingredients))
+
+ingredient_counts <- ingredients_clean_long %>%
+  distinct(name, clean_ingredients) %>%
+  count(clean_ingredients, name = "cocktail_count")
+
+rare_ingredients <- ingredient_counts %>%
+  filter(cocktail_count == 1)
+
+cocktails_with_rare_ingredients <- ingredients_clean_long %>%
+  semi_join(rare_ingredients, by = "clean_ingredients") %>%
+  select(name, clean_ingredients)
+
+cocktails_with_rare_ingredients
 
 ```
 
 ## 9. What are the cocktails without rare ingredients?
 
 ```{r}
-  
+  library(tidyverse)
+
+ingredients_clean_long <- cocktail_data_long %>%
+  separate_rows(clean_ingredients, sep = ",") %>%
+  mutate(clean_ingredients = str_trim(clean_ingredients))
+
+ingredient_counts <- ingredients_clean_long %>%
+  distinct(name, clean_ingredients) %>%
+  count(clean_ingredients, name = "cocktail_count")
+
+ingredients_with_counts <- ingredients_clean_long %>%
+  left_join(ingredient_counts, by = "clean_ingredients") %>%
+  mutate(is_rare = cocktail_count == 1)
+
+cocktails_no_rare <- ingredients_with_counts %>%
+  group_by(name) %>%
+  summarise(has_rare = any(is_rare)) %>%
+  filter(!has_rare)
+
+cocktails_no_rare$name
+
 ```
 
 ## 10. Create a cheat sheet for the bartender!
@@ -115,6 +232,19 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 ```
 
 ```{r}
+install.packages("tidyverse")
+library(tidyverse)
+ingredients_clean_long <- cocktail_data_long %>%
+  separate_rows(clean_ingredients, sep = ",") %>%
+  mutate(clean_ingredients = str_trim(clean_ingredients))
+tab <- table(ingredients_clean_long$name, ingredients_clean_long$clean_ingredients)
+
+matrix_df <- as.data.frame.matrix(tab) %>%
+  mutate(name = rownames(.)) %>%
+  select(name, everything()) %>%
+  mutate(across(-name, ~ ifelse(. > 0, "X", "")))
+
+matrix_df
 
 ```
 
